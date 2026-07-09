@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { endpoints, generateBody, uniqueMarker } from './endpoints';
+import { endpoints, generateBody, uniqueMarker, ItemBody } from './endpoints';
 import { createItem } from './helpers';
 import { ItemsEndpoint } from "./endpoints/items.endpoint";
 
@@ -30,22 +30,44 @@ test.describe('Items API Tests', () => {
     });
 
     test('accepts only the required fields (optional fields become null)', async () => {
-      const res = await Items.createItem({
-        data: { title: `Bare ${uniqueMarker()}`, price: 0, quantity: 0 },
-      });
-      // const res = await request.post(endpoints.createItem.path(), {
-      //   data: { title: `Bare ${uniqueMarker()}`, price: 0, quantity: 0 },
-      // });
+      const res = await Items.createItem({ title: `Bare ${uniqueMarker()}`, price: 0, quantity: 0});
       expect(res.status()).toBe(201);
       const item = (await res.json()).data;
       expect(item.description).toBeNull();
       expect(item.image).toBeNull();
     });
 
-    test('rejects a missing title (400 VALIDATION_ERROR)', async () => {
-      const res = await Items.createItem({
-        data: { price: 10, quantity: 1 },
+    interface InvalidCase {
+      describe: string;
+      field: keyof ItemBody; // constrained to actual body fields, not any string
+      value: unknown; // deliberately-invalid values, so allow anything
+    }
+
+    const invalidCreateCases: InvalidCase[] = [
+      { describe: 'Title is number', field: 'title', value: 234343 },
+      { describe: 'Title is an object', field: 'title', value: { title: '3423432' } },
+      { describe: 'Price is a string', field: 'price', value: '23.33' },
+      { describe: 'Price is an object', field: 'price', value: { price: '23.33' } }
+    ];
+
+    for (const testRow of invalidCreateCases) {
+      test(testRow.describe, async () => {
+        const body = generateBody(endpoints.createItem, {
+          [testRow.field]: testRow.value,
+        } as Partial<ItemBody>); // cast: we're intentionally violating the type
+        const res = await Items.createItem({
+          data: body,
+        });
+        expect(res.status()).toBe(400);
+        const err = (await res.json()).error;
+        expect(err.code).toBe('VALIDATION_ERROR');
+        expect(err.correlationId).toBeTruthy();
+        expect(err.details.some((d: { path?: string }) => d.path === testRow.field)).toBe(true);
       });
+    }
+
+    test('rejects a missing title (400 VALIDATION_ERROR)', async () => {
+      const res = await Items.createItem({ price: 10, quantity: 1 });
       expect(res.status()).toBe(400);
       const err = (await res.json()).error;
       expect(err.code).toBe('VALIDATION_ERROR');
@@ -54,37 +76,29 @@ test.describe('Items API Tests', () => {
     });
 
     test('rejects a negative price', async () => {
-      const res = await Items.createItem({
-        data: generateBody(endpoints.createItem, { price: -1 }),
-      });
+      const res = await Items.createItem(generateBody(endpoints.createItem, { price: -1 }));
       expect(res.status()).toBe(400);
       const err = (await res.json()).error;
       expect(err.details.some((d: { path?: string }) => d.path === 'price')).toBe(true);
     });
 
     test('rejects a non-integer quantity', async () => {
-      const res = await Items.createItem({
-        data: generateBody(endpoints.createItem, { quantity: 1.5 }),
-      });
+      const res = await Items.createItem(generateBody(endpoints.createItem, { quantity: 1.5 }));
       expect(res.status()).toBe(400);
       const err = (await res.json()).error;
       expect(err.details.some((d: { path?: string }) => d.path === 'quantity')).toBe(true);
     });
 
     test('rejects an invalid image URL', async () => {
-      const res = await Items.createItem({
-        data: generateBody(endpoints.createItem, { image: 'not-a-url' }),
-      });
+      const res = await Items.createItem(generateBody(endpoints.createItem, { image: 'not-a-url' }));
       expect(res.status()).toBe(400);
       const err = (await res.json()).error;
       expect(err.details.some((d: { path?: string }) => d.path === 'image')).toBe(true);
     });
 
     test('rejects malformed JSON (400 BAD_REQUEST)', async () => {
-      const res = await Items.createItem({
-        headers: { 'Content-Type': 'application/json' },
-        data: '{ "title": "oops", ', // deliberately broken JSON
-      });
+      const res = await Items.createItem('{ "title": "oops", ', {
+        headers: { 'Content-Type': 'application/json' }}); // deliberately broken JSON
       expect(res.status()).toBe(400);
       expect((await res.json()).error.code).toBe('BAD_REQUEST');
     });
@@ -185,9 +199,7 @@ test.describe('Items API Tests', () => {
   test.describe('PATCH /api/items/:id', () => {
     test('applies a partial update and preserves untouched fields', async ({ request }) => {
       const created = await createItem(request);
-      const res = await Items.updateItemById(created.id, {
-        data: generateBody(endpoints.updateItem, { price: 149.99 }),
-      });
+      const res = await Items.updateItemById(created.id, generateBody(endpoints.updateItem, { price: 149.99 }));
       expect(res.status()).toBe(200);
       const item = (await res.json()).data;
       expect(item.price).toBe(149.99);
@@ -197,25 +209,21 @@ test.describe('Items API Tests', () => {
     });
 
     test('returns 404 for an unknown id', async () => {
-      const res = await Items.updateItemById(999999999, {
-        data: generateBody(endpoints.updateItem),
-      });
+      const res = await Items.updateItemById(999999999, generateBody(endpoints.updateItem));
       expect(res.status()).toBe(404);
       expect((await res.json()).error.code).toBe('NOT_FOUND');
     });
 
     test('rejects an empty body', async ({ request }) => {
       const created = await createItem(request);
-      const res = await Items.updateItemById(created.id, { data: {} });
+      const res = await Items.updateItemById(created.id, {} );
       expect(res.status()).toBe(400);
       expect((await res.json()).error.code).toBe('VALIDATION_ERROR');
     });
 
     test('rejects invalid values', async ({ request }) => {
       const created = await createItem(request);
-      const res = await Items.updateItemById(created.id, {
-        data: generateBody(endpoints.updateItem, { price: -10 }),
-      });
+      const res = await Items.updateItemById(created.id, generateBody(endpoints.updateItem, { price: -10 }));
       expect(res.status()).toBe(400);
       const err = (await res.json()).error;
       expect(err.details.some((d: { path?: string }) => d.path === 'price')).toBe(true);

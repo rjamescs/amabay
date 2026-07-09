@@ -20,12 +20,12 @@ export class ItemsEndpoint {
         return this.request.get(`${this.url}/${id}`, options);
     }
 
-    async updateItemById(id: number, body: {}, options?: RequestOptions): Promise<APIResponse> {
+    async updateItemById(id: number, body?: {}, options?: RequestOptions): Promise<APIResponse> {
         let newOptions = { ...options, data: body };
         return this.request.patch(`${this.url}/${id}`, newOptions);
     }
 
-    async createItem(body: {}, options?: RequestOptions): Promise<APIResponse> {
+    async createItem(body?: {}, options?: RequestOptions): Promise<APIResponse> {
         let newOptions = { ...options, data: body };
         return this.request.post(this.url, newOptions);
     }
