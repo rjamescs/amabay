@@ -47,7 +47,15 @@ test.describe('Items API Tests', () => {
       { describe: 'Title is number', field: 'title', value: 234343 },
       { describe: 'Title is an object', field: 'title', value: { title: '3423432' } },
       { describe: 'Price is a string', field: 'price', value: '23.33' },
-      { describe: 'Price is an object', field: 'price', value: { price: '23.33' } }
+      { describe: 'Price is an object', field: 'price', value: { price: '23.33' } },
+      { describe: 'Price is too precise', field: 'price', value: 123.456789 },
+      { describe: 'Quantity is string', field: 'quantity', value: "Five hundred" },
+      { describe: 'Quantity is an object', field: 'quantity', value: { quantity: "Five hundred" } },
+      { describe: 'Description is a number', field: 'description', value: 53234 },
+      { describe: 'Description is an object', field: 'description', value: { description: "thing" } },
+      { describe: 'Image is a number', field: 'image', value: 3234324 },
+      { describe: 'Image is not a url', field: 'image', value: "placeyImage" },
+      { describe: 'Image is an object', field: 'image', value: { image: "https://place.org/image.png"} },
     ];
 
     for (const testRow of invalidCreateCases) {
@@ -55,9 +63,7 @@ test.describe('Items API Tests', () => {
         const body = generateBody(endpoints.createItem, {
           [testRow.field]: testRow.value,
         } as Partial<ItemBody>); // cast: we're intentionally violating the type
-        const res = await Items.createItem({
-          data: body,
-        });
+        const res = await Items.createItem(body);
         expect(res.status()).toBe(400);
         const err = (await res.json()).error;
         expect(err.code).toBe('VALIDATION_ERROR');

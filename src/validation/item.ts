@@ -16,11 +16,12 @@ const imageUrl = z
 
 export const createItemSchema = z.object({
   title: z.string().trim().min(1, 'title is required').max(200),
-  price: z.number({ invalid_type_error: 'price must be a number' }).nonnegative('price must be >= 0'),
+  price: z.number({ invalid_type_error: 'price must be a number' }).nonnegative('price must be >= 0')
+      .multipleOf(0.01, { message: "price can have at most 2 decimal places" }),
   quantity: z
-    .number({ invalid_type_error: 'quantity must be a number' })
-    .int('quantity must be an integer')
-    .nonnegative('quantity must be >= 0'),
+      .number({ invalid_type_error: 'quantity must be a number' })
+      .int('quantity must be an integer')
+      .nonnegative('quantity must be >= 0'),
   description: z.string().trim().max(5000).optional(),
   image: imageUrl.optional(),
 });
