@@ -11,6 +11,9 @@ export const config = {
   // Pagination guardrails for search/list endpoints.
   defaultPageSize: 20,
   maxPageSize: 100,
+  // Upper bound on requested page number, so an absurdly large page can't
+  // force a huge, cheap-to-request OFFSET scan in the DB.
+  maxPage: 10_000,
   // Seed sample data on first run (only when the items table is empty).
   seedOnInit: (process.env.SEED ?? 'true').toLowerCase() !== 'false',
 } as const;

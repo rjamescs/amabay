@@ -40,7 +40,7 @@ export const searchQuerySchema = z.object({
   // Free-text query matched against title + description. Optional so this
   // endpoint doubles as "list all".
   q: z.string().trim().min(1).max(200).optional(),
-  page: z.coerce.number().int().positive().default(1),
+  page: z.coerce.number().int().positive().max(config.maxPage).default(1),
   pageSize: z.coerce
     .number()
     .int()

@@ -14,7 +14,7 @@ export const itemsRouter = Router();
  * GET /api/items
  * Search + list with pagination.
  *   ?q=<text>        optional full-text (LIKE) match on title/description
- *   ?page=<n>        1-based page number (default 1)
+ *   ?page=<n>        1-based page number (default 1, max 10000)
  *   ?pageSize=<n>    default 20, max 100
  * When q is omitted, returns all items (newest first).
  */

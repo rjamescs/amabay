@@ -97,6 +97,14 @@ test('POST /api/items rejects negative price (400)', async () => {
   assert.ok(res.body.error.details.some((d: { path?: string }) => d.path === 'price'));
 });
 
+test('POST /api/items rejects price with more than 2 decimal places (400)', async () => {
+  const res = await request(app)
+    .post('/api/items')
+    .send({ title: 'X', price: 1.999, quantity: 1 });
+  assert.equal(res.status, 400);
+  assert.ok(res.body.error.details.some((d: { path?: string }) => d.path === 'price'));
+});
+
 test('POST /api/items rejects negative quantity (400)', async () => {
   const res = await request(app)
     .post('/api/items')
@@ -192,6 +200,12 @@ test('GET /api/items respects pagination', async () => {
 
 test('GET /api/items rejects pageSize over the max (400)', async () => {
   const res = await request(app).get('/api/items').query({ pageSize: 1000 });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error.code, 'VALIDATION_ERROR');
+});
+
+test('GET /api/items rejects page over the max (400)', async () => {
+  const res = await request(app).get('/api/items').query({ page: 1_000_000 });
   assert.equal(res.status, 400);
   assert.equal(res.body.error.code, 'VALIDATION_ERROR');
 });
